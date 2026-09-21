@@ -1,0 +1,67 @@
+name: Food Delivery CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-test-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Build website
+        run: |
+          mkdir -p build
+          cp index.html build/
+          cp style.css build/
+          cp README.md build/
+
+      - name: Test website files
+        run: |
+          test -f build/index.html
+          test -f build/style.css
+          grep -q "<html" build/index.html
+          grep -q "</html>" build/index.html
+          echo "Website tests passed successfully."
+
+      - name: Package application
+        run: |
+          cd build
+          zip -r ../food-delivery-system.zip .
+          cd ..
+          echo "Application packaged successfully."
+
+      - name: Upload packaged application
+        uses: actions/upload-artifact@v4
+        with:
+          name: food-delivery-system-package
+          path: food-delivery-system.zip
+
+      - name: Prepare deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build-test-package
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
